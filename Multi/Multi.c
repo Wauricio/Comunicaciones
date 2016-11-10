@@ -9,8 +9,6 @@
 #define MAXVAL 32767.0
 //32512
 #define OUTFILE "OUT.wav"
-#define Ntap 10
-#define PI 3.14159265358979323846
 
 
 typedef struct {
@@ -132,26 +130,68 @@ int main(int arcgs , char *args[])
                 printf(" \n Header Archivo 1 \n");
                 FileInfo info2=readHeader(buffer2);
                 samples2=getData(info2.size/2,fileptr2);
-
+                printf("Opciones :\n Multiplicacion 2 Canales ------------------- (0) \n Multiplicacion 1 Canal------------------- (1) \t ");
+                int op;
+                scanf("%d",&op);
 
 		/***************************************Multi******************************************************/
+                float *smpTemp;
+                short *temp2;
+                float max=0.0;
+                FileInfo min=(info1.size<info2.size) ?info1:info2;
+                smpTemp=(float*)malloc(sizeof(float)*min.size/2);
+                temp2=(short*)malloc(sizeof(short)*min.size/2);
 
-            FileInfo min=(info1.size<info2.size) ?info1:info2;
-            //short *smpTemp=(short*)malloc(sizeof(short)*min.size);
-            double *smpTemp=(double*)malloc(sizeof(double)*min.size/2);
-            double max=0.0;
-            for(int i=0;i<min.size/2;i++){
-                smpTemp[i]=(samples1[i]*samples2[i])/MAXVAL;
-                if(smpTemp[i]>max)
-                    max=smpTemp[i];
-            }
-            for(int i=0;i<min.size/2;i++){
-                samples1[i]=smpTemp[i]*MAXVAL/max;
-            }
+                switch(op){
+                    case 0:
+
+                    //short *smpTemp=(short*)malloc(sizeof(short)*min.size);
+                        for(int i=0;i<min.size/4;i++){
+                            smpTemp[i*2]=(samples1[i*2]*samples2[i*2] - samples1[i*2+1]*samples2[i*2+1])/MAXVAL;
+                            smpTemp[i*2+1]=(samples1[i*2]*samples2[i*2+1] +samples2[i*2]*samples1[i*2+1])/MAXVAL;
+                            /*printf("\n %d a:%d , b: %d ---  c:%d   d: %d  --->>> R : %f   I:%f ",i,samples1[i*2],samples1[i*2+1],samples2[i*2],samples2[i*2+1]
+
+                                   ,smpTemp[i*2],smpTemp[i*2+1]);*/
+                            if(abs(smpTemp[i*2])>max)
+                                max=abs(smpTemp[i*2]);
+                            else if(abs(smpTemp[i*2+1])>max)
+                                max=abs(smpTemp[i*2+1]);
+
+                        }
+                        for(int i=0;i<min.size/2;i++){
+                            temp2[i]=(short)smpTemp[i]*MAXVAL/max;
+                        }
 
 
-            CreateFileWAV(OUTFILE,samples1,min.size/2,min.sampleRate,min.btps,min.channels,min.blockAlign);
-            //CreateFileWAV(OUTFILE,Pulse(705),705,44100,16,1,sizeof(short));
+
+                        break;
+
+                    case 1:
+                            for(int i=0;i<min.size/2;i++){
+                                smpTemp[i]=samples1[i]*samples2[i]/MAXVAL;
+                                if(abs(smpTemp[i])>max)
+                                    max=abs(smpTemp[i]);
+
+                            }
+                            for(int i=0;i<min.size/2;i++){
+                                temp2[i]=(short)smpTemp[i]*MAXVAL/max;
+                            }
+
+
+
+
+
+
+                        break;
+
+
+
+                }
+
+                CreateFileWAV(OUTFILE,temp2,min.size/2,min.sampleRate,min.btps,min.channels,sizeof(short));
+
+
+
 
 
 
@@ -165,6 +205,7 @@ int main(int arcgs , char *args[])
             free(samples2);
             free(smpTemp);
 			free(buffer);
+			free(temp2);
 			free(buffer2);
 	return 0;
 
